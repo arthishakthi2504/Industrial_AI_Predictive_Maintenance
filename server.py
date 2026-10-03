@@ -6,6 +6,7 @@ import os
 import math
 import logging
 from datetime import datetime
+import os
 
 # ============================================================
 # CONFIGURATION
@@ -316,8 +317,7 @@ if __name__ == "__main__":
     print("Waiting for ESP32 sensor data...")
     print()
 
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=False
-    )
+
+app.run(host="0.0.0.0", 
+    port=int(os.environ.get("PORT", 5000)))
+    
