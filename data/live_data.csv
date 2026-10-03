@@ -1,0 +1,38 @@
+timestamp,temperature,vibration,current,rpm,ml_status,machine_health,maintenance,evidence
+2026-10-03 19:42:30,45.0,0.4,2.5,1420.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 19:42:54,85.0,1.0,6.0,1100.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,"High temperature, High vibration, High current, Low RPM"
+2026-10-03 21:23:08,24.0,0.5,2.0,1500.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 21:23:37,24.0,0.5,2.0,1500.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 21:57:06,24.0,0.5,1.2,1500.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 22:32:44,24.0,0.0,0.0,1537.0,ANOMALY,WARNING,AI detected abnormal machine behavior. Inspect machine condition.,No abnormal sensor conditions detected.
+2026-10-03 22:32:52,24.0,0.0,0.0,1386.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 22:33:00,24.0,0.0,0.0,1216.0,ANOMALY,WARNING,AI detected abnormal machine behavior. Inspect machine condition.,No abnormal sensor conditions detected.
+2026-10-03 22:33:08,24.0,0.0,0.0,1396.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 22:33:16,24.0,0.0,0.0,1434.0,NORMAL,HEALTHY,Machine operating normally.,No abnormal sensor conditions detected.
+2026-10-03 22:33:24,24.0,0.0,0.0,1596.0,ANOMALY,WARNING,AI detected abnormal machine behavior. Inspect machine condition.,No abnormal sensor conditions detected.
+2026-10-03 22:33:32,24.0,0.0,0.0,1744.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,High RPM
+2026-10-03 22:34:30,24.0,0.0,0.0,1640.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,High RPM
+2026-10-03 22:35:17,68.7,0.98,9.11,1700.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,"High vibration, High current, High RPM"
+2026-10-03 22:40:34,24.0,0.0,0.0,1229.0,ANOMALY,WARNING,AI detected abnormal machine behavior. Inspect machine condition.,No abnormal sensor conditions detected.
+2026-10-03 22:40:42,24.0,0.0,0.0,1750.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,High RPM
+2026-10-03 22:40:50,24.0,0.0,6.15,1255.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,High current
+2026-10-03 22:40:58,24.0,3.93,6.15,1493.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:41:07,50.8,3.93,6.15,1411.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:41:15,50.8,3.93,6.15,1529.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:51:40,50.8,3.93,6.15,1587.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:51:47,-5.9,3.93,9.78,1600.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current, High RPM"
+2026-10-03 22:51:56,-5.9,3.93,9.78,1272.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,"High vibration, High current"
+2026-10-03 22:52:04,-5.9,3.93,9.78,1386.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:52:12,-5.9,3.93,9.78,1462.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:52:20,-5.9,3.93,9.78,1331.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:52:28,-5.9,3.93,9.78,1787.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current, High RPM"
+2026-10-03 22:52:38,-5.9,3.93,9.78,1546.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:52:46,-5.9,3.93,9.78,1517.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:52:54,-5.9,3.93,9.78,1716.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current, High RPM"
+2026-10-03 22:53:02,-5.9,3.93,9.78,1608.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current, High RPM"
+2026-10-03 22:53:10,-5.9,3.93,9.78,1208.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,"High vibration, High current"
+2026-10-03 22:53:18,-5.9,3.93,9.78,1229.0,ANOMALY,CRITICAL,Maintenance required. Inspect machine immediately.,"High vibration, High current"
+2026-10-03 22:53:26,-5.9,3.93,9.78,1473.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:53:34,-5.9,3.93,9.78,1424.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
+2026-10-03 22:53:41,-5.9,3.93,9.78,1657.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current, High RPM"
+2026-10-03 22:53:49,-5.9,3.93,9.78,1358.0,NORMAL,WARNING,Sensor condition requires inspection.,"High vibration, High current"
