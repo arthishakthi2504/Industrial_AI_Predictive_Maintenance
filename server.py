@@ -6,7 +6,6 @@ import os
 import math
 import logging
 from datetime import datetime
-import os
 
 # ============================================================
 # CONFIGURATION
@@ -41,7 +40,6 @@ RPM_HIGH = 1600
 # ============================================================
 
 app = Flask(__name__)
-
 logging.basicConfig(level=logging.INFO)
 
 # ============================================================
@@ -155,20 +153,18 @@ def analyze_machine(temperature, vibration, current, rpm):
     }
 
 # ============================================================
-# SENSOR API
+# RECEIVE SENSOR DATA FROM WOKWI
 # ============================================================
 
 @app.route("/api/sensor", methods=["POST"])
 def receive_sensor_data():
 
-    # Check request content type
     if not request.is_json:
         return jsonify({
             "success": False,
             "error": "Content-Type must be application/json"
         }), 400
 
-    # Parse JSON without raising a BadRequest exception
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
@@ -177,7 +173,6 @@ def receive_sensor_data():
             "error": "Invalid or missing JSON object"
         }), 400
 
-    # Validate required fields
     missing_fields = [
         field for field in FEATURES
         if field not in data
@@ -190,7 +185,6 @@ def receive_sensor_data():
                      + ", ".join(missing_fields)
         }), 400
 
-    # Convert and validate numeric values
     try:
         temperature = float(data["temperature"])
         vibration = float(data["vibration"])
@@ -216,7 +210,6 @@ def receive_sensor_data():
         }), 400
 
     try:
-        # Analyze machine condition
         result = analyze_machine(
             temperature,
             vibration,
@@ -228,7 +221,6 @@ def receive_sensor_data():
             "%Y-%m-%d %H:%M:%S"
         )
 
-        # Prepare CSV row
         row = {
             "timestamp": timestamp,
             "temperature": temperature,
@@ -249,7 +241,6 @@ def receive_sensor_data():
             index=False
         )
 
-        # Display reading in terminal
         print()
         print("==============================================")
         print("           NEW SENSOR READING")
@@ -265,22 +256,12 @@ def receive_sensor_data():
         print(f"Action      : {result['maintenance']}")
         print("==============================================")
 
-        # Send response to client
         return jsonify({
             "success": True,
-            "timestamp": timestamp,
-            "temperature": temperature,
-            "vibration": vibration,
-            "current": current,
-            "rpm": rpm,
-            "ml_status": result["ml_status"],
-            "machine_health": result["machine_health"],
-            "maintenance": result["maintenance"],
-            "evidence": result["evidence"]
+            **row
         }), 200
 
     except Exception:
-        # Log full traceback in the Flask terminal
         app.logger.exception(
             "Error while processing sensor data"
         )
@@ -288,7 +269,47 @@ def receive_sensor_data():
         return jsonify({
             "success": False,
             "error": "Internal server error. "
-                     "Check the Flask terminal."
+                     "Check the server logs."
+        }), 500
+
+# ============================================================
+# GET LIVE SENSOR DATA FOR STREAMLIT
+# ============================================================
+
+@app.route("/api/data", methods=["GET"])
+def get_sensor_data():
+
+    try:
+        if not os.path.exists(LIVE_DATA_FILE):
+            return jsonify({
+                "success": True,
+                "data": []
+            }), 200
+
+        df = pd.read_csv(LIVE_DATA_FILE)
+
+        if df.empty:
+            return jsonify({
+                "success": True,
+                "data": []
+            }), 200
+
+        # Return the latest 100 readings
+        latest_data = df.tail(100)
+
+        return jsonify({
+            "success": True,
+            "data": latest_data.to_dict(orient="records")
+        }), 200
+
+    except Exception:
+        app.logger.exception(
+            "Error retrieving sensor data"
+        )
+
+        return jsonify({
+            "success": False,
+            "error": "Could not retrieve sensor data"
         }), 500
 
 # ============================================================
@@ -297,11 +318,13 @@ def receive_sensor_data():
 
 @app.route("/", methods=["GET"])
 def home():
+
     return jsonify({
         "system": "Industrial AI Machine Monitoring",
         "status": "Server running",
         "ai_model": "Loaded",
-        "api_endpoint": "/api/sensor"
+        "api_endpoint": "/api/sensor",
+        "data_endpoint": "/api/data"
     })
 
 # ============================================================
@@ -314,10 +337,11 @@ if __name__ == "__main__":
     print("Starting Flask server...")
     print("Server address: http://127.0.0.1:5000")
     print("Sensor API: POST /api/sensor")
+    print("Data API: GET /api/data")
     print("Waiting for ESP32 sensor data...")
     print()
 
-
-app.run(host="0.0.0.0", 
-    port=int(os.environ.get("PORT", 5000)))
-    
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000))
+    )
