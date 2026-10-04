@@ -5,6 +5,8 @@ import joblib
 import os
 import math
 import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
 # ============================================================
@@ -17,9 +19,7 @@ MODEL_FILE = os.path.join(
     BASE_DIR, "ml", "anomaly_model.pkl"
 )
 
-LIVE_DATA_FILE = os.path.join(
-    BASE_DIR, "data", "live_data.csv"
-)
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 FEATURES = [
     "temperature",
@@ -59,32 +59,49 @@ if not os.path.exists(MODEL_FILE):
 model = joblib.load(MODEL_FILE)
 
 print("AI model loaded successfully.")
-print("Model:", MODEL_FILE)
 
 # ============================================================
-# CREATE LIVE DATA FILE
+# DATABASE CONNECTION
 # ============================================================
 
-os.makedirs(os.path.dirname(LIVE_DATA_FILE), exist_ok=True)
+def get_db_connection():
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is missing."
+        )
 
-CSV_COLUMNS = [
-    "timestamp",
-    "temperature",
-    "vibration",
-    "current",
-    "rpm",
-    "ml_status",
-    "machine_health",
-    "maintenance",
-    "evidence"
-]
+    return psycopg2.connect(DATABASE_URL)
 
-if not os.path.exists(LIVE_DATA_FILE):
-    pd.DataFrame(columns=CSV_COLUMNS).to_csv(
-        LIVE_DATA_FILE,
-        index=False
-    )
-    print("Live data file created.")
+
+# ============================================================
+# CREATE DATABASE TABLE
+# ============================================================
+
+def initialize_database():
+    create_table_sql = """
+        CREATE TABLE IF NOT EXISTS sensor_readings (
+            id SERIAL PRIMARY KEY,
+            timestamp TIMESTAMP NOT NULL,
+            temperature DOUBLE PRECISION NOT NULL,
+            vibration DOUBLE PRECISION NOT NULL,
+            current DOUBLE PRECISION NOT NULL,
+            rpm DOUBLE PRECISION NOT NULL,
+            ml_status TEXT NOT NULL,
+            machine_health TEXT NOT NULL,
+            maintenance TEXT NOT NULL,
+            evidence TEXT NOT NULL
+        );
+    """
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(create_table_sql)
+
+    print("PostgreSQL database initialized successfully.")
+
+
+# Initialize the database when the application starts.
+initialize_database()
 
 # ============================================================
 # MACHINE CONDITION ANALYSIS
@@ -101,7 +118,9 @@ def analyze_machine(temperature, vibration, current, rpm):
 
     prediction = model.predict(input_data)[0]
 
-    ml_status = "ANOMALY" if prediction == -1 else "NORMAL"
+    ml_status = (
+        "ANOMALY" if prediction == -1 else "NORMAL"
+    )
 
     evidence = []
 
@@ -126,15 +145,20 @@ def analyze_machine(temperature, vibration, current, rpm):
             "Maintenance required. "
             "Inspect machine immediately."
         )
+
     elif ml_status == "ANOMALY":
         machine_health = "WARNING"
         maintenance = (
             "AI detected abnormal machine behavior. "
             "Inspect machine condition."
         )
+
     elif evidence:
         machine_health = "WARNING"
-        maintenance = "Sensor condition requires inspection."
+        maintenance = (
+            "Sensor condition requires inspection."
+        )
+
     else:
         machine_health = "HEALTHY"
         maintenance = "Machine operating normally."
@@ -190,6 +214,7 @@ def receive_sensor_data():
         vibration = float(data["vibration"])
         current = float(data["current"])
         rpm = float(data["rpm"])
+
     except (TypeError, ValueError):
         return jsonify({
             "success": False,
@@ -217,31 +242,54 @@ def receive_sensor_data():
             rpm
         )
 
-        timestamp = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        timestamp = datetime.utcnow()
+
+        # Save the new reading in PostgreSQL.
+        insert_sql = """
+            INSERT INTO sensor_readings (
+                timestamp,
+                temperature,
+                vibration,
+                current,
+                rpm,
+                ml_status,
+                machine_health,
+                maintenance,
+                evidence
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id;
+        """
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    insert_sql,
+                    (
+                        timestamp,
+                        temperature,
+                        vibration,
+                        current,
+                        rpm,
+                        result["ml_status"],
+                        result["machine_health"],
+                        result["maintenance"],
+                        result["evidence"]
+                    )
+                )
+
+                reading_id = cursor.fetchone()[0]
 
         row = {
-            "timestamp": timestamp,
+            "id": reading_id,
+            "timestamp": timestamp.isoformat(),
             "temperature": temperature,
             "vibration": vibration,
             "current": current,
             "rpm": rpm,
-            "ml_status": result["ml_status"],
-            "machine_health": result["machine_health"],
-            "maintenance": result["maintenance"],
-            "evidence": result["evidence"]
+            **result
         }
 
-        # Save sensor reading
-        pd.DataFrame([row], columns=CSV_COLUMNS).to_csv(
-            LIVE_DATA_FILE,
-            mode="a",
-            header=False,
-            index=False
-        )
-
-        print()
         print("==============================================")
         print("           NEW SENSOR READING")
         print("==============================================")
@@ -252,8 +300,8 @@ def receive_sensor_data():
         print("----------------------------------------------")
         print(f"AI Status   : {result['ml_status']}")
         print(f"Health      : {result['machine_health']}")
-        print(f"Evidence    : {result['evidence']}")
         print(f"Action      : {result['maintenance']}")
+        print("Saved to PostgreSQL.")
         print("==============================================")
 
         return jsonify({
@@ -268,38 +316,61 @@ def receive_sensor_data():
 
         return jsonify({
             "success": False,
-            "error": "Internal server error. "
-                     "Check the server logs."
+            "error": "Could not process or save sensor data."
         }), 500
 
 # ============================================================
-# GET LIVE SENSOR DATA FOR STREAMLIT
+# GET SENSOR DATA FOR STREAMLIT
 # ============================================================
 
 @app.route("/api/data", methods=["GET"])
 def get_sensor_data():
 
     try:
-        if not os.path.exists(LIVE_DATA_FILE):
+        limit = request.args.get("limit", default=100, type=int)
+
+        if limit is None or limit < 1:
             return jsonify({
-                "success": True,
-                "data": []
-            }), 200
+                "success": False,
+                "error": "Limit must be a positive number."
+            }), 400
 
-        df = pd.read_csv(LIVE_DATA_FILE)
+        limit = min(limit, 1000)
 
-        if df.empty:
-            return jsonify({
-                "success": True,
-                "data": []
-            }), 200
+        select_sql = """
+            SELECT
+                id,
+                timestamp,
+                temperature,
+                vibration,
+                current,
+                rpm,
+                ml_status,
+                machine_health,
+                maintenance,
+                evidence
+            FROM sensor_readings
+            ORDER BY id DESC
+            LIMIT %s;
+        """
 
-        # Return the latest 100 readings
-        latest_data = df.tail(100)
+        with get_db_connection() as conn:
+            with conn.cursor(
+                cursor_factory=RealDictCursor
+            ) as cursor:
+                cursor.execute(select_sql, (limit,))
+                rows = cursor.fetchall()
+
+        # Return oldest-to-newest within the selected records.
+        rows = list(reversed(rows))
+
+        for row in rows:
+            row["timestamp"] = row["timestamp"].isoformat()
 
         return jsonify({
             "success": True,
-            "data": latest_data.to_dict(orient="records")
+            "count": len(rows),
+            "data": rows
         }), 200
 
     except Exception:
@@ -309,7 +380,7 @@ def get_sensor_data():
 
         return jsonify({
             "success": False,
-            "error": "Could not retrieve sensor data"
+            "error": "Could not retrieve sensor data."
         }), 500
 
 # ============================================================
@@ -323,7 +394,8 @@ def home():
         "system": "Industrial AI Machine Monitoring",
         "status": "Server running",
         "ai_model": "Loaded",
-        "api_endpoint": "/api/sensor",
+        "database": "PostgreSQL",
+        "sensor_endpoint": "/api/sensor",
         "data_endpoint": "/api/data"
     })
 
@@ -333,13 +405,10 @@ def home():
 
 if __name__ == "__main__":
 
-    print()
     print("Starting Flask server...")
-    print("Server address: http://127.0.0.1:5000")
     print("Sensor API: POST /api/sensor")
     print("Data API: GET /api/data")
     print("Waiting for ESP32 sensor data...")
-    print()
 
     app.run(
         host="0.0.0.0",
